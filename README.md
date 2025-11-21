@@ -202,6 +202,24 @@ avr-sts-humeai/
 └── .env                  # Environment variables (create this)
 ```
 
+## Testing
+
+### WebRTC Phone for Testing
+
+If you need a WebRTC-based SIP phone to test this integration with Asterisk, check out this modern browser-based phone:
+
+🌐 **[WebRTC Phone](https://github.com/mirkobertone/webrtc-phone)**
+
+A clean, minimal WebRTC phone built with React and TypeScript that works perfectly for testing voice AI integrations. Features include:
+
+- Modern, responsive UI with smooth animations
+- WebSocket transport support (WS/WSS)
+- Easy SIP account configuration
+- Works directly in your browser
+- Perfect for testing AVR integrations with Hume AI
+
+Simply configure it to connect to your Asterisk server and start testing your Hume EVI integration!
+
 ## Support & Community
 
 - **GitHub:** [https://github.com/agentvoiceresponse](https://github.com/agentvoiceresponse) - Report issues, contribute code.
