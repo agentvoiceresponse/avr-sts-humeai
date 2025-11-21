@@ -1,11 +1,25 @@
-# Agent Voice Response - HumeAI Speech-to-Speech Integration
+<div align="center">
+
+# Agent Voice Response × HumeAI
 
 [![Discord](https://img.shields.io/discord/1347239846632226998?label=Discord&logo=discord)](https://discord.gg/DFTU69Hg74)
 [![GitHub Repo stars](https://img.shields.io/github/stars/agentvoiceresponse/avr-sts-humeai?style=social)](https://github.com/agentvoiceresponse/avr-sts-humeai)
 [![Docker Pulls](https://img.shields.io/docker/pulls/agentvoiceresponse/avr-sts-humeai?label=Docker%20Pulls&logo=docker)](https://hub.docker.com/r/agentvoiceresponse/avr-sts-humeai)
 [![Ko-fi](https://img.shields.io/badge/Support%20us%20on-Ko--fi-ff5e5b.svg)](https://ko-fi.com/agentvoiceresponse)
 
-This repository showcases the integration between **Agent Voice Response** and **HumeAI's Empathic Voice Interface (EVI)**. The application provides a WebSocket server that handles real-time audio streaming between clients (such as Asterisk) and Hume's EVI API, performing automatic audio format conversions and bidirectional communication.
+<br/>
+
+<p>
+  <img src="img/avr.png" alt="Agent Voice Response" width="200" style="vertical-align: middle;"/>
+  <span style="font-size: 48px; margin: 0 30px; vertical-align: middle;">×</span>
+  <img src="img/hume.webp" alt="Hume AI" width="200" style="vertical-align: middle;"/>
+</p>
+
+</div>
+
+---
+
+This repository showcases the integration between **Agent Voice Response** and **HumeAI's Empathic Voice Interface (EVI)** using speech-to-speech technology. The application provides a WebSocket server that handles real-time bidirectional audio streaming between clients (such as Asterisk) and Hume's EVI API, enabling natural voice conversations with automatic audio format conversions.
 
 ## Prerequisites
 
