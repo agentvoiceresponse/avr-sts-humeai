@@ -9,11 +9,19 @@
 
 <br/>
 
-<p>
-  <img src="img/avr.png" alt="Agent Voice Response" width="200" style="vertical-align: middle;"/>
-  <span style="font-size: 48px; margin: 0 30px; vertical-align: middle;">×</span>
-  <img src="img/hume.webp" alt="Hume AI" width="200" style="vertical-align: middle;"/>
-</p>
+<table>
+<tr>
+<td align="center" width="200">
+<img src="img/avr.png" alt="Agent Voice Response" width="180"/>
+</td>
+<td align="center" valign="middle" width="100">
+<h1>×</h1>
+</td>
+<td align="center" width="200">
+<img src="img/hume.webp" alt="Hume AI" width="180"/>
+</td>
+</tr>
+</table>
 
 </div>
 
