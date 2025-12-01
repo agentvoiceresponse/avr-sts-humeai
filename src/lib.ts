@@ -2,18 +2,14 @@
  * Strip WAV header from audio buffer and return raw PCM data
  * WAV header is typically 44 bytes for standard PCM format
  */
-export const stripWavHeader = (buffer: Buffer): Buffer => {
-  // Look for 'data' chunk marker in the WAV file
-  const dataMarker = Buffer.from("data");
-  let dataIndex = -1;
 
-  // Find the 'data' chunk
-  for (let i = 0; i < Math.min(buffer.length, 200); i++) {
-    if (buffer.slice(i, i + 4).equals(dataMarker)) {
-      dataIndex = i;
-      break;
-    }
-  }
+// Pre-allocated constant to avoid Buffer creation on each call
+const DATA_MARKER = Buffer.from("data");
+
+export const stripWavHeader = (buffer: Buffer): Buffer => {
+  // Use indexOf for efficient byte sequence search (limited to first 200 bytes)
+  const searchLimit = Math.min(buffer.length, 200);
+  const dataIndex = buffer.subarray(0, searchLimit).indexOf(DATA_MARKER);
 
   if (dataIndex === -1) {
     console.warn(
@@ -25,6 +21,6 @@ export const stripWavHeader = (buffer: Buffer): Buffer => {
   // Skip 'data' marker (4 bytes) + data size (4 bytes) = 8 bytes total
   const pcmDataStart = dataIndex + 8;
 
-  // Return only the PCM data portion
-  return buffer.slice(pcmDataStart);
+  // Return only the PCM data portion (subarray creates a view, no copy)
+  return buffer.subarray(pcmDataStart);
 };

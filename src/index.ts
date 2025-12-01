@@ -45,7 +45,7 @@ const initializeHumeConnection = async (clientWs: WebSocket) => {
   humeSocket.on("message", (msg: any) => {
     // Log non-audio messages for debugging
     if (msg.type !== "audio_output") {
-      console.log("Received message from Hume:", JSON.stringify(msg, null, 2));
+      console.log("Received message from Hume:", JSON.stringify(msg));
     }
 
     // Handle error messages from Hume
@@ -117,8 +117,10 @@ const handleClientConnection = (clientWs: WebSocket) => {
     }
 
     try {
+      const bufferLength = audioBuffer.length;
+
       // If audio is smaller than chunk size, send it all at once
-      if (audioBuffer.length <= CHUNK_SIZE) {
+      if (bufferLength <= CHUNK_SIZE) {
         humeSocket.sendAudioInput({
           data: audioBuffer.toString("base64"),
         });
@@ -126,19 +128,14 @@ const handleClientConnection = (clientWs: WebSocket) => {
       }
 
       // Split audio into chunks and send sequentially
-      let offset = 0;
-      let chunkCount = 0;
-      while (offset < audioBuffer.length) {
-        const chunk = audioBuffer.slice(offset, offset + CHUNK_SIZE);
+      // Use subarray() to create views without copying memory
+      for (let offset = 0; offset < bufferLength; offset += CHUNK_SIZE) {
         humeSocket.sendAudioInput({
-          data: chunk.toString("base64"),
+          data: audioBuffer
+            .subarray(offset, offset + CHUNK_SIZE)
+            .toString("base64"),
         });
-        offset += CHUNK_SIZE;
-        chunkCount++;
       }
-      console.log(
-        `Sent ${chunkCount} chunks to Hume (total ${audioBuffer.length} bytes)`
-      );
     } catch (error) {
       console.error("Error sending audio chunks to Hume:", error);
     }
@@ -147,30 +144,25 @@ const handleClientConnection = (clientWs: WebSocket) => {
   // Function to send all queued messages when socket is ready
   const flushQueue = () => {
     if (!humeSocket || humeSocket.readyState !== WebSocket.OPEN) {
-      console.log(
-        `Cannot flush queue: socket not ready (queued: ${queued.length})`
-      );
       return;
     }
 
-    console.log(`Flushing ${queued.length} queued audio messages`);
+    const queueLength = queued.length;
+    if (queueLength === 0) {
+      return;
+    }
 
     try {
-      for (const queuedMessage of queued) {
+      for (let i = 0; i < queueLength; i++) {
         // Upsample from client's 8000 Hz to Hume's 48000 Hz
-        const clientAudio = Buffer.from(queuedMessage.audio, "base64");
+        const clientAudio = Buffer.from(queued[i].audio, "base64");
         const providerAudio = resampler.upsample(clientAudio);
-
-        console.log(
-          `Processing audio: client=${clientAudio.length}B, upsampled=${providerAudio.length}B`
-        );
 
         // Send audio in optimal chunks (100ms)
         sendAudioInChunks(providerAudio);
       }
       // Clear the queue after sending
       queued.length = 0;
-      console.log("Queue flushed successfully");
     } catch (error) {
       console.error("Error flushing audio queue:", error);
     }
