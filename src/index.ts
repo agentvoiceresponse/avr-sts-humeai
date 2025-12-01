@@ -11,12 +11,15 @@
 import { WebSocket, WebSocketServer } from "ws";
 import dotenv from "dotenv";
 import { HumeClient } from "hume";
-import { AudioResampler } from "avr-resampler";
+// import { AudioResampler } from "avr-resampler";
 import { ChatSocket } from "hume/dist/cjs/api/resources/empathicVoice/resources/chat";
-import { stripWavHeader } from "./lib";
+import { parseWav } from "./lib";
 dotenv.config();
 
-const resampler = new AudioResampler(48000);
+// Provider sample rate - Hume expects 48kHz input
+// The AudioResampler handles: 8kHz (client) <-> 48kHz (Hume)
+// const HUME_SAMPLE_RATE = 48000;
+// const resampler = new AudioResampler(HUME_SAMPLE_RATE);
 
 const client = new HumeClient({
   apiKey: process.env.HUME_API_KEY!, // Load from environment variables
@@ -31,15 +34,15 @@ const initializeHumeConnection = async (clientWs: WebSocket) => {
     console.log("Hume connection opened");
 
     // Send session settings to configure audio format
-    // This ensures Hume knows we're sending 48kHz linear16 PCM audio
+    // This tells Hume we're sending 48kHz linear16 PCM audio
     humeSocket.sendSessionSettings({
       audio: {
         encoding: "linear16",
         channels: 1,
-        sampleRate: 48000,
+        sampleRate: 8000,
       },
     });
-    console.log("Session settings sent: 48kHz, linear16, mono");
+    console.log(`Session settings sent: 8000Hz, linear16, mono`);
   });
 
   humeSocket.on("message", (msg: any) => {
@@ -59,17 +62,28 @@ const initializeHumeConnection = async (clientWs: WebSocket) => {
         // Decode base64 audio data
         const providerAudio = Buffer.from(msg.data, "base64");
 
-        // Strip WAV header to get raw PCM data
-        const rawPcmAudio = stripWavHeader(providerAudio);
+        // Parse WAV to get actual sample rate and PCM data
+        const wavInfo = parseWav(providerAudio);
+        if (!wavInfo) {
+          console.error("Failed to parse WAV from Hume");
+          return;
+        }
 
-        // Downsample from Hume's sample rate to client's sample rate
-        const clientAudio = resampler.downsample(rawPcmAudio);
+        // Log actual output sample rate (only once for debugging)
+        if (wavInfo.sampleRate !== 8000) {
+          console.warn(
+            `Hume output sample rate (${wavInfo.sampleRate}Hz) differs from expected (8000Hz)`
+          );
+        }
+
+        // Downsample from Hume's sample rate to client's 8kHz
+        // const clientAudio = resampler.downsample(wavInfo.pcmData);
 
         if (clientWs.readyState === WebSocket.OPEN) {
           clientWs.send(
             JSON.stringify({
               type: "audio",
-              audio: clientAudio.toString("base64"),
+              audio: wavInfo.pcmData.toString("base64"),
             })
           );
         }
@@ -156,10 +170,10 @@ const handleClientConnection = (clientWs: WebSocket) => {
       for (let i = 0; i < queueLength; i++) {
         // Upsample from client's 8000 Hz to Hume's 48000 Hz
         const clientAudio = Buffer.from(queued[i].audio, "base64");
-        const providerAudio = resampler.upsample(clientAudio);
+        // const providerAudio = resampler.upsample(clientAudio);
 
         // Send audio in optimal chunks (100ms)
-        sendAudioInChunks(providerAudio);
+        sendAudioInChunks(clientAudio);
       }
       // Clear the queue after sending
       queued.length = 0;
@@ -219,7 +233,7 @@ process.on("SIGTERM", () => {
 // Initialize and start server
 const startServer = async () => {
   try {
-    await resampler.initialize();
+    // await resampler.initialize();
 
     // Create WebSocket server
     const PORT = process.env.PORT || 6035;
