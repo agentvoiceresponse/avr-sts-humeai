@@ -12,7 +12,7 @@ This repository showcases the integration between **Agent Voice Response** and *
 To set up and run this project, you will need:
 
 1. **Node.js** and **npm** installed
-2. An **HumeAI API key** with access to the real-time API
+2. A **HumeAI API key** with access to the real-time API
 3. **WebSocket** support in your environment
 
 ## Setup
@@ -63,6 +63,7 @@ The **Agent Voice Response** system integrates with HumeAI's Real-time Speech-to
 - **Express.js Server**: Handles incoming audio streams from clients
 - **WebSocket Communication**: Manages real-time communication with HumeAI's API
 - **Real-time Streaming**: Processes and streams audio data in real-time
+- **Tool Usage**: Tool usage consistent with other implementations in the ecosystem
 
 ## API Endpoints
 
