@@ -16,6 +16,7 @@
 
 const WebSocket = require("ws");
 const { create } = require("@alexanderolsen/libsamplerate-js");
+const { loadTools, getToolHandler } = require("./loadTools");
 
 require("dotenv").config();
 
@@ -140,7 +141,18 @@ const handleClientConnection = (clientWs) => {
         if (process.env.HUMEAI_VOICE_ID) {
           console.log("Using voice ID:", process.env.HUMEAI_VOICE_ID);
           wsUrl += `&voice_id=${process.env.HUMEAI_VOICE_ID}`;
-        }  
+        }
+      }
+      // Load available tools for Hume
+      try {
+        const tools = loadTools();
+        if (tools.length > 0) {
+          const toolSchemas = encodeURIComponent(JSON.stringify(tools));
+          wsUrl += `&tool_schemas=${toolSchemas}`;
+          console.log(`Loaded ${tools.length} tools for Hume`);
+        }
+      } catch (error) {
+        console.error(`Error loading tools for Hume: ${error.message}`);
       }
       ws = new WebSocket(wsUrl);
 
@@ -162,9 +174,9 @@ const handleClientConnection = (clientWs) => {
         ws.send(JSON.stringify({ type: "assistant_input", custom_session_id: sessionUuid, text: HUMEAI_WELCOME_MESSAGE }));
       });
 
-      ws.on("message", (data) => {
+      ws.on("message", async (data) => {
         try {
-          const message = JSON.parse(data); 
+          const message = JSON.parse(data);
           switch (message.type) {
             case "audio_output":
               const audioChunk = Buffer.from(message.data, "base64");
@@ -179,7 +191,7 @@ const handleClientConnection = (clientWs) => {
               console.log("User interruption");
               clientWs.send(JSON.stringify({ type: "interruption" }));
               break;
-            case "user_message": 
+            case "user_message":
               console.log("User message:", message.message.content);
               const userData = {
                 type: "transcript",
@@ -188,7 +200,7 @@ const handleClientConnection = (clientWs) => {
               };
               clientWs.send(JSON.stringify(userData));
               break;
-            case "assistant_message": 
+            case "assistant_message":
               console.log("Assistant message:", message.message.content);
               const agentData = {
                 type: "transcript",
@@ -196,6 +208,45 @@ const handleClientConnection = (clientWs) => {
                 text: message.message.content,
               };
               clientWs.send(JSON.stringify(agentData));
+              break;
+            case "tool_call":
+              console.log("Tool call:", message);
+              const handler = getToolHandler(message.name);
+              if (!handler) {
+                console.error(`No handler found for tool: ${message.name}`);
+                const toolResponse = {
+                  type: "tool_response",
+                  tool_call_id: message.tool_call_id,
+                  content: JSON.stringify({ error: `Tool ${message.name} not found` }),
+                };
+                ws.send(JSON.stringify(toolResponse));
+                return;
+              }
+
+              try {
+                // Execute the tool handler with the provided arguments
+                const content = await handler(
+                  sessionUuid,
+                  JSON.parse(message.parameters)
+                );
+                console.log("Tool response:", content);
+                const toolResponse = {
+                  type: "tool_response",
+                  tool_call_id: message.tool_call_id,
+                  content: JSON.stringify(content),
+                };
+                ws.send(JSON.stringify(toolResponse));
+              } catch (error) {
+                // Handle errors during tool execution
+                console.error(`Error executing tool ${message.name}:`, error);
+                const toolResponse = {
+                  type: "tool_response",
+                  tool_call_id: message.tool_call_id,
+                  content: JSON.stringify({ error: `Error executing tool ${message.name}: ${error.message}` }),
+                };
+                ws.send(JSON.stringify(toolResponse));
+                return;
+              }
               break;
             default:
               console.log("Unknown message type from HumeAI:", message.type);
@@ -205,6 +256,7 @@ const handleClientConnection = (clientWs) => {
           console.error("Error parsing HumeAI message:", error);
         }
       });
+      
 
       ws.on("error", (error) => {
         console.error("HumeAI WebSocket error:", error);
